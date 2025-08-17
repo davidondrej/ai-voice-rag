@@ -1,0 +1,55 @@
+---
+alwaysApply: true
+---
+
+<details>
+Your task is to help me figure out how to build this project as quickly and efficiently as possible. Basically, what we need to do is build a full-stack web app with a simple UI, simple user interface, where the user can activate this voice agent, and that will trigger the speech-to-speech interaction, and the agent should have access to RAC, Retrieval Augmented Generation, which just means some external PDFs. That means the UI also should have some simple way to upload documents in a format that is supported by the OpenAI real-time API. And we should also show these documents in some folder structure, very simple UI, so that the user can see which documents are being loaded into the voice agent. It is important to follow the scope, but it's also important that you do not overthink this project.
+</details>
+
+<technical-spec>
+- Use WebRTC in the browser for the web app
+</technical-spec>
+
+<step-by-step>
+### 5‑step plan
+
+#### Scaffold and infra
+
+- Stack: Next.js 14 (App Router) + Tailwind for a simple UI.
+- Backend: Python FastAPI.
+- Data: Supabase Postgres + pgvector for RAG, Supabase Storage for PDFs.
+- Auth: simple email magic link for the console; clinic staff only.
+- Realtime setup: FastAPI endpoint to mint ephemeral tokens for WebRTC sessions. Deploy: Vercel (web), Fly.io/Render (API), Supabase managed. 
+- OpenAI Platform
+
+#### Voice agent core (browser)
+
+- WebRTC client connects to gpt-4o-realtime with the ephemeral token.
+- Enable VAD, barge‑in, streaming TTS.
+- Tool/functions the model can call: search_kb(query), schedule_appointment(payload), send_whatsapp(payload), collect_consent(form_schema), log_event(meta).
+- Guardrails: cite sources, refuse outside‑KB clinical advice, escalate on low retrieval confidence.
+- Latency levers: short turns, early audio, cache system prompt.
+
+#### RAG + content manager
+
+- UI: upload PDFs, assign to folders, show version history.
+- Ingestion worker: extract → chunk (token‑aware) → embed (OpenAI embeddings) → upsert to pgvector with metadata.
+- Retrieval: top‑k + MMR, section‑level citations, version pinning per session.
+- Expose search_kb tool to Realtime; return snippets + source URIs.
+
+#### Scheduling, forms, WhatsApp, calls
+
+- Scheduling MVP: Google Calendar adapter now; swap to clinic EHR/CRM later via an adapter interface.
+- Forms: web intake and consent rendered from JSON schema; store signed PDFs.
+- WhatsApp: Twilio webhook → FastAPI → same RAG/tools; templated reminders and recalls.
+- Voice calls: Twilio Voice Media Streams → your WebSocket bridge → Realtime API. Start from OpenAI’s Twilio demo to forward audio frames and function calls. 
+- GitHub
+
+#### Analytics, QA, reliability
+
+- Log every turn: intent, latency, tool calls, booking outcomes, retrieval scores.
+- Simple dashboard: volumes, conversion, no‑show impact, first‑response time.
+- QA: auto‑score transcripts, surface low‑confidence and long‑silence calls.
+- Reliability: health checks, retries, dead‑letter queue, rate limits, redaction of PII, encrypted storage, configurable retention.
+</step-by-step>
+
