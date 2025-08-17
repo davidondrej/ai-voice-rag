@@ -11,45 +11,36 @@ Your task is to help me figure out how to build this project as quickly and effi
 </technical-spec>
 
 <step-by-step>
-### 5‑step plan
+Use WebRTC. Drop Twilio, EHR, WhatsApp, analytics for now.
 
-#### Scaffold and infra
+**4‑step simplified plan**
 
-- Stack: Next.js 14 (App Router) + Tailwind for a simple UI.
-- Backend: Python FastAPI.
-- Data: Supabase Postgres + pgvector for RAG, Supabase Storage for PDFs.
-- Auth: simple email magic link for the console; clinic staff only.
-- Realtime setup: FastAPI endpoint to mint ephemeral tokens for WebRTC sessions. Deploy: Vercel (web), Fly.io/Render (API), Supabase managed. 
-- OpenAI Platform
+1. **Monolith scaffold**
 
-#### Voice agent core (browser)
+* Tech: FastAPI + one static HTML/JS page (no framework) + Tailwind.
+* Endpoints: `/session` (mint ephemeral Realtime token), `/upload`, `/list`, `/rag/search`.
+* Serve the UI from FastAPI. Single repo. Dockerfile.
 
-- WebRTC client connects to gpt-4o-realtime with the ephemeral token.
-- Enable VAD, barge‑in, streaming TTS.
-- Tool/functions the model can call: search_kb(query), schedule_appointment(payload), send_whatsapp(payload), collect_consent(form_schema), log_event(meta).
-- Guardrails: cite sources, refuse outside‑KB clinical advice, escalate on low retrieval confidence.
-- Latency levers: short turns, early audio, cache system prompt.
+2. **Docs + RAG (minimal)**
 
-#### RAG + content manager
+* Store uploads under `/data/docs/<folder>/`.
+* Extract text: PyMuPDF (PDF), python‑docx (Word), plain text.
+* Chunk naive by tokens. Embed with `text-embedding-3-small`.
+* Index: FAISS on disk (`/data/index.faiss`) + JSON metadata with file paths.
+* `/rag/search?q` returns top‑k chunks + source URIs.
 
-- UI: upload PDFs, assign to folders, show version history.
-- Ingestion worker: extract → chunk (token‑aware) → embed (OpenAI embeddings) → upsert to pgvector with metadata.
-- Retrieval: top‑k + MMR, section‑level citations, version pinning per session.
-- Expose search_kb tool to Realtime; return snippets + source URIs.
+3. **Voice agent wiring**
 
-#### Scheduling, forms, WhatsApp, calls
+* Frontend uses Realtime WebRTC with ephemeral token.
+* Use Agents SDK in the browser to define one tool: `search_kb(query)`.
+* Tool handler calls `/rag/search` and returns snippets + citations.
+* System prompt: “Answer only from KB. Cite sources. Ask to upload if missing.”
+* UI: Start/Stop mic, live transcript, last answer, list of loaded files.
 
-- Scheduling MVP: Google Calendar adapter now; swap to clinic EHR/CRM later via an adapter interface.
-- Forms: web intake and consent rendered from JSON schema; store signed PDFs.
-- WhatsApp: Twilio webhook → FastAPI → same RAG/tools; templated reminders and recalls.
-- Voice calls: Twilio Voice Media Streams → your WebSocket bridge → Realtime API. Start from OpenAI’s Twilio demo to forward audio frames and function calls. 
-- GitHub
+4. **Ship fast**
 
-#### Analytics, QA, reliability
-
-- Log every turn: intent, latency, tool calls, booking outcomes, retrieval scores.
-- Simple dashboard: volumes, conversion, no‑show impact, first‑response time.
-- QA: auto‑score transcripts, surface low‑confidence and long‑silence calls.
-- Reliability: health checks, retries, dead‑letter queue, rate limits, redaction of PII, encrypted storage, configurable retention.
+* Deploy FastAPI container to Railway/Fly with a persistent volume at `/data`.
+* Env vars: `OPENAI_API_KEY`, CORS origin.
+* Sanity tests: ask 5 clinic FAQs sourced from an uploaded PDF. Verify citations and latency.
 </step-by-step>
 
