@@ -5,12 +5,12 @@
   <title>AI Dental Voice Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
-  </head>
+</head>
 <body class="bg-slate-50 text-slate-900">
   <div class="max-w-3xl mx-auto p-6 space-y-8">
     <header class="space-y-2">
       <h1 class="text-2xl font-semibold">AI Dental Voice Prototype</h1>
-      <p class="text-sm text-slate-600">WebRTC voice agent + uploads. Stage 1 scaffold.</p>
+      <p class="text-sm text-slate-600">WebRTC voice agent + uploads + minimal RAG.</p>
     </header>
 
     <section class="p-4 bg-white rounded-lg border space-y-4">
@@ -30,8 +30,10 @@
 
     <section class="p-4 bg-white rounded-lg border space-y-4">
       <h2 class="font-medium">Upload Documents</h2>
+      <label class="text-sm text-slate-700">Folder (optional)</label>
+      <input id="folderInput" type="text" placeholder="default" class="block border rounded px-2 py-1 w-48" />
       <input id="inputFiles" type="file" accept=".pdf,.docx,.txt" multiple class="block" />
-      <button id="btnUpload" class="px-4 py-2 rounded bg-black text-white">Upload</button>
+      <button id="btnUpload" class="px-4 py-2 rounded bg-black text-white">Upload & Index</button>
       <div id="uploadMsg" class="text-sm text-slate-600"></div>
     </section>
 
@@ -39,8 +41,17 @@
       <h2 class="font-medium">Documents</h2>
       <div id="docsList" class="space-y-2 text-sm"></div>
     </section>
-  </div>
 
+    <section class="p-4 bg-white rounded-lg border space-y-4">
+      <h2 class="font-medium">RAG Search</h2>
+      <div class="flex gap-2">
+        <input id="searchInput" type="text" placeholder="Ask a question..." class="flex-1 border rounded px-2 py-1" />
+        <button id="btnSearch" class="px-4 py-2 rounded border">Search</button>
+      </div>
+      <div id="searchOut" class="text-sm text-slate-700 space-y-3"></div>
+    </section>
+
+  </div>
   <script src="/static/app.js"></script>
 </body>
 </html>

@@ -17,37 +17,23 @@ async function startVoice() {
   statusEl.textContent = "starting...";
   connEl.textContent = "connecting";
   try {
-    // 1) Get ephemeral key from backend
     const r = await fetch("/session");
-    if (!r.ok) {
-      const t = await r.text();
-      throw new Error("failed /session: " + t);
-    }
+    if (!r.ok) throw new Error("failed /session: " + (await r.text()));
     const data = await r.json();
     const EPHEMERAL_KEY = data?.client_secret?.value;
     if (!EPHEMERAL_KEY) throw new Error("no ephemeral key");
 
-    // 2) Create PeerConnection
     pc = new RTCPeerConnection();
-    pc.onconnectionstatechange = () => {
-      connEl.textContent = pc.connectionState;
-    };
+    pc.onconnectionstatechange = () => connEl.textContent = pc.connectionState;
+    pc.ontrack = (e) => remoteAudio.srcObject = e.streams[0];
 
-    // 3) Remote audio
-    pc.ontrack = (e) => {
-      remoteAudio.srcObject = e.streams[0];
-    };
-
-    // 4) Local mic
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     micEl.textContent = "on";
     pc.addTrack(localStream.getTracks()[0]);
 
-    // 5) Data channel for events/logs
     dc = pc.createDataChannel("oai-events");
     dc.onmessage = (e) => log("[event] " + e.data);
 
-    // 6) SDP offer -> OpenAI Realtime over WebRTC
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
@@ -56,16 +42,9 @@ async function startVoice() {
     const sdpResp = await fetch(`${baseUrl}?model=${encodeURIComponent(model)}`, {
       method: "POST",
       body: offer.sdp,
-      headers: {
-        Authorization: `Bearer ${EPHEMERAL_KEY}`,
-        "Content-Type": "application/sdp",
-      },
+      headers: { Authorization: `Bearer ${EPHEMERAL_KEY}`, "Content-Type": "application/sdp" },
     });
-
-    if (!sdpResp.ok) {
-      const txt = await sdpResp.text();
-      throw new Error("SDP exchange failed: " + txt);
-    }
+    if (!sdpResp.ok) throw new Error("SDP exchange failed: " + (await sdpResp.text()));
 
     const answer = { type: "answer", sdp: await sdpResp.text() };
     await pc.setRemoteDescription(answer);
@@ -83,10 +62,7 @@ async function stopVoice() {
   try {
     if (dc) { dc.close(); dc = null; }
     if (pc) { pc.close(); pc = null; }
-    if (localStream) {
-      localStream.getTracks().forEach(t => t.stop());
-      localStream = null;
-    }
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   } finally {
     micEl.textContent = "off";
     connEl.textContent = "disconnected";
@@ -94,7 +70,6 @@ async function stopVoice() {
   }
 }
 
-// Uploads and listing
 async function refreshDocs() {
   const r = await fetch("/list");
   const data = await r.json();
@@ -107,7 +82,7 @@ async function refreshDocs() {
   for (const d of data.docs) {
     const a = document.createElement("a");
     a.href = d.url;
-    a.textContent = `${d.name} (${d.size} bytes)`;
+    a.textContent = `${d.folder}/${d.name} (${d.size} bytes)`;
     a.className = "text-blue-600 underline";
     a.target = "_blank";
     const div = document.createElement("div");
@@ -118,9 +93,12 @@ async function refreshDocs() {
 
 async function uploadFiles() {
   const files = document.getElementById("inputFiles").files;
+  const folder = (document.getElementById("folderInput").value || "default").trim();
   if (!files || files.length === 0) return;
   const form = new FormData();
   for (const f of files) form.append("files", f);
+  form.append("folder", folder);
+
   const r = await fetch("/upload", { method: "POST", body: form });
   const msg = document.getElementById("uploadMsg");
   if (!r.ok) {
@@ -128,13 +106,49 @@ async function uploadFiles() {
     return;
   }
   const data = await r.json();
-  msg.textContent = `Uploaded ${data.saved?.length || 0} file(s).`;
+  const n = data.saved?.length || 0;
+  const added = data.saved?.reduce((acc, s) => acc + (s.ingest?.added || 0), 0);
+  msg.textContent = `Uploaded ${n} file(s). Indexed ${added} chunks.`;
   await refreshDocs();
 }
 
+async function search() {
+  const q = (document.getElementById("searchInput").value || "").trim();
+  if (!q) return;
+  const r = await fetch(`/rag/search?q=${encodeURIComponent(q)}&k=5`);
+  const data = await r.json();
+  const out = document.getElementById("searchOut");
+  out.innerHTML = "";
+  if (!data.results || data.results.length === 0) {
+    out.textContent = data.note || "No results.";
+    return;
+  }
+  for (const res of data.results) {
+    const box = document.createElement("div");
+    box.className = "p-3 rounded border bg-slate-50";
+    const src = document.createElement("a");
+    src.href = res.source;
+    src.target = "_blank";
+    src.className = "text-blue-600 underline";
+    src.textContent = `${res.folder}/${res.filename}#chunk${res.chunk_index}`;
+    const p = document.createElement("p");
+    p.className = "mt-1";
+    p.textContent = res.text;
+    const s = document.createElement("div");
+    s.className = "text-xs text-slate-500 mt-1";
+    s.textContent = `score: ${res.score.toFixed(3)}`;
+    box.appendChild(src);
+    box.appendChild(p);
+    box.appendChild(s);
+    out.appendChild(box);
+  }
+}
+
+// Wire UI
 document.getElementById("btnStart").addEventListener("click", startVoice);
 document.getElementById("btnStop").addEventListener("click", stopVoice);
 document.getElementById("btnUpload").addEventListener("click", uploadFiles);
+document.getElementById("btnSearch").addEventListener("click", search);
 
 refreshDocs();
 
