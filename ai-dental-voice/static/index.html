@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AI Dental Voice Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-3xl mx-auto p-6 space-y-8">
+    <header class="space-y-2">
+      <h1 class="text-2xl font-semibold">AI Dental Voice Prototype</h1>
+      <p class="text-sm text-slate-600">WebRTC voice agent + uploads. Stage 1 scaffold.</p>
+    </header>
+
+    <section class="p-4 bg-white rounded-lg border space-y-4">
+      <h2 class="font-medium">Voice Agent</h2>
+      <div class="flex items-center gap-2">
+        <button id="btnStart" class="px-4 py-2 rounded bg-black text-white">Start</button>
+        <button id="btnStop" class="px-4 py-2 rounded border">Stop</button>
+        <span id="status" class="text-sm text-slate-600">idle</span>
+      </div>
+      <audio id="remoteAudio" autoplay></audio>
+      <div class="text-sm text-slate-600">
+        <div>Mic: <span id="micState">off</span></div>
+        <div>Connection: <span id="connState">disconnected</span></div>
+      </div>
+      <pre id="log" class="text-xs bg-slate-100 p-2 rounded overflow-auto max-h-40"></pre>
+    </section>
+
+    <section class="p-4 bg-white rounded-lg border space-y-4">
+      <h2 class="font-medium">Upload Documents</h2>
+      <input id="inputFiles" type="file" accept=".pdf,.docx,.txt" multiple class="block" />
+      <button id="btnUpload" class="px-4 py-2 rounded bg-black text-white">Upload</button>
+      <div id="uploadMsg" class="text-sm text-slate-600"></div>
+    </section>
+
+    <section class="p-4 bg-white rounded-lg border space-y-4">
+      <h2 class="font-medium">Documents</h2>
+      <div id="docsList" class="space-y-2 text-sm"></div>
+    </section>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
+
+
