@@ -44,3 +44,8 @@ Use WebRTC. Drop Twilio, EHR, WhatsApp, analytics for now.
 * Sanity tests: ask 5 clinic FAQs sourced from an uploaded PDF. Verify citations and latency.
 </step-by-step>
 
+
+# SERVER START COMMAND
+uvicorn app.main:app --reload --env-file .env
+
+
